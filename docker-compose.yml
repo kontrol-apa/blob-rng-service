@@ -1,0 +1,24 @@
+services:
+  worker:
+    image: kontrolapa/blob-rng-provider:latest
+    command: [ "node", "--trace-deprecation", "bin/runWorkers.js", "workers"]
+    build:  .
+    environment:
+      RANDOMNESS_SEED : ${RANDOMNESS_SEED}
+      RANDOM_NUMBER_AMOUNT : ${RANDOM_NUMBER_AMOUNT}
+      RANDOMNESS_PROVIDER_PRIVATE_KEY : ${RANDOMNESS_PROVIDER_PRIVATE_KEY}
+      RANDOMNESS_PROVIDER_ACCOUNT_ADDRESS : ${RANDOMNESS_PROVIDER_ACCOUNT_ADDRESS}
+      RAMDOMNESS_REQUESTER_CONTRACT_ADDRESS : ${RAMDOMNESS_REQUESTER_CONTRACT_ADDRESS}
+      RANDOMNESS_REQUESTER_INDEXING_START_BLOCK : ${RANDOMNESS_REQUESTER_INDEXING_START_BLOCK}
+      EVENT_POLLING_INTERVAL_MS : ${EVENT_POLLING_INTERVAL_MS}
+      RPC_NODE_URL : ${RPC_NODE_URL}
+      PRODUCTION : ${PRODUCTION}
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "30m"
+        max-file: "3"
+    
+
+

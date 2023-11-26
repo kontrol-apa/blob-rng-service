@@ -1,0 +1,22 @@
+@startuml
+!theme toy
+actor User
+participant Smart_Contract
+participant Blockchain
+participant RNG_Service
+
+activate Blockchain
+activate RNG_Service
+activate Smart_Contract
+User -> Smart_Contract: Invoke
+Smart_Contract -> Blockchain: emit: RandmonnessRequested (uint256: UUID)
+RNG_Service -> Blockchain: query for events
+Blockchain --> RNG_Service: return RandmonnessRequested (UUID)
+RNG_Service -> RNG_Service: fetch next fair RN
+RNG_Service -> Smart_Contract: invoke FullfilRandomnessRequest
+Smart_Contract -> Smart_Contract: process RN
+Smart_Contract -> Blockchain: emit: RandmonnessRequestFullfilled (uint256: UUID)
+RNG_Service -> Blockchain: query for events
+Blockchain --> RNG_Service: return RandmonnessRequestFullfilled (UUID)
+RNG_Service -> RNG_Service: mark request as finalized
+@enduml
