@@ -81,3 +81,4 @@ You cairo contract needs to emit two events and expose a specific function to fi
 
 ### Architecture 
 
+![Architecture Diagram](https://github.com/kontrol-apa/blob-rng-service/blob/main/diagrams/architecture.svg?raw=true)
