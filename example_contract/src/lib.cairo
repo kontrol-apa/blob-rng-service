@@ -24,7 +24,7 @@ mod ExampleRandomnessRequester {
     #[derive(Drop, starknet::Event)]
     enum Event {
         RandomnessRequestIssued: RandomnessRequestIssued,
-        RandomnessRequestFullfilled: RandomnessRequestFullfilled
+        RandomnessRequestFulfilled: RandomnessRequestFulfilled
     }
 
     #[derive(Drop, starknet::Event)]
@@ -33,7 +33,7 @@ mod ExampleRandomnessRequester {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct RandomnessRequestFullfilled {
+    struct RandomnessRequestFulfilled {
         request_id: felt252
     }
 
@@ -61,7 +61,7 @@ mod ExampleRandomnessRequester {
 
         fn fulfill_randomness(ref self: ContractState, random_number: u256, randomness_request_id: felt252) {
             assert(self.randomness_fulfiller.read()==get_caller_address(),'Fulfiller Only');
-            self.emit(RandomnessRequestFullfilled { request_id:randomness_request_id });
+            self.emit(RandomnessRequestFulfilled { request_id:randomness_request_id });
         }
 
         fn set_randomness_fulfiller(ref self: ContractState, randomness_fulfiller: ContractAddress) {
