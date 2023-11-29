@@ -9,7 +9,7 @@ class RNGFullfillerWorker extends BaseWorker {
         this.commonConfig = this.getConfig();
         this._timeOutId = null;
         this._timeOutInterval = 5000 | parseInt(process.env.EVENT_POLLING_INTERVAL_MS);
-        this._fulfillRandomnessRequests = this._fulfillRandomnessRequests.bind(this); // bind to current context
+        this.searchAndfulfillRequests = this.searchAndfulfillRequests.bind(this); // bind to current context
         this.rngs = hashSeedNTimesBinary(process.env.RANDOMNESS_SEED, parseInt(process.env.RANDOM_NUMBER_AMOUNT) | 1000000);
         this.finalizationHistoryBuffer = [];
         this.finalizationHistoryBufferLen = parseInt(process.env.FINALIZATION_HISTORY_BUFFER_LEN) | 20;
@@ -26,8 +26,20 @@ class RNGFullfillerWorker extends BaseWorker {
         this.recentRequestsBuffer = []
         this.recentRequestsBufferLength = 5;
         this.currentRandomNumberIndex = 0; // incremented after every finalization, starts from 0
-        this.blocksToWait = 2; // this is only relevant if there is an open request for some time. In an event of start just wait this amount of blocks to ensure that all unifinalized requests are actually missing and not due to the fulfilled event not being received yet.
+        this.blocksToWait = 2 | process.env.BLOCKS_TO_WAIT; // this is only relevant if there is an open request for some time. In an event of start just wait this amount of blocks to ensure that all unifinalized requests are actually missing and not due to the fulfilled event not being received yet.
+        this.blockToWaitUntil;
 
+    }
+
+
+    async execute() {
+        await this._createAndConnectRandomnessRequesterContract();
+        this._timeOutId = await this.searchAndfulfillRequests();
+
+    }
+
+    async waitNBlocksBeforeStarting() {
+        const {block_number} = await this.rpcProvider.getBlockWithTxHashes('latest');
 
     }
 
@@ -42,37 +54,40 @@ class RNGFullfillerWorker extends BaseWorker {
         this.randomnessRequesterContractABI = compressedContract.abi;
     }
 
-    async _setRandomnessRequesterCreationBlockId() {
-        if (!this.startBlock) {
-            this.startBlock = 2313; // TODO FETCH FROM ADDY
-        }
-    }
-    async execute() {
-        await this._createAndConnectRandomnessRequesterContract();
-        await this._setRandomnessRequesterCreationBlockId();
-        this._timeOutId = await this.searchAndfulfillRequests();
-
-    }
 
     async searchAndfulfillRequests() {
         try {
-            const eventsData = await this._searchRandomnessRequests();
-            this._parseEvents(eventsData);
+            const eventsData = await this._fetchRandomnessEvents();
+            this._processEventsAndFillRequestBuffer(eventsData);
             const requestsToFulfill = this._extractUnfulfilledRequests();
+            if(!this.blockToWaitUntil || this.blockToWaitUntil > this.startBlock) {
+                if(requestsToFulfill.length === 0) { // all good, continue, nothing hanging 
+                    this.blockToWaitUntil = this.startBlock;
+                }
+                else if(!this.blockToWaitUntil) { // we have an unfulfilled request and we havent set until when to wait
+                    this.blockToWaitUntil = this.startBlock + this-this.blocksToWait;
+                    return setTimeout(this.searchAndfulfillRequests, this._timeOutInterval);
+                    // we set until when to wait and restart
+                }
+        
+            }
             for (let i = 0; i < requestsToFulfill.length; i++) {
                 const { requestId } = requestsToFulfill[i];
                 await this.fulfillRandomnessRequest(requestId);
-        }
-        this.pruneRecentRequestsBuffer();
+            }
+            this.pruneRecentRequestsBuffer();
+            return setTimeout(this.searchAndfulfillRequests, this._timeOutInterval);
+
 
         }
         catch (error) {
             console.error("Error fetching events:", error);
-            return [];
+            return setTimeout(this.searchAndfulfillRequests, this._timeOutInterval);
+
         }
     }
 
-    async _searchRandomnessRequests() {
+    async _fetchRandomnessEvents() {
         try {
             const lastBlock = await this.rpcProvider.getBlockWithTxHashes('latest');
             console.log(`last block onchain ${lastBlock.block_number}`)
@@ -120,7 +135,7 @@ class RNGFullfillerWorker extends BaseWorker {
 
     }
 
-    async _parseEvents(eventsData) {
+    async _processEventsAndFillRequestBuffer(eventsData) {
         const parsedEvents = this.randomnessRequester.parseEvents({ events: eventsData });
         for (let index = 0; index < eventsData.length; index++) {
             const item = eventsData[index];
@@ -133,9 +148,6 @@ class RNGFullfillerWorker extends BaseWorker {
                 console.log("SHouldnt happpen");
             }
         }
-
-
-        // TODO search for unfinalized events (updaste the buffer ) -> the search space should be relatively small since this is only done if there is event data 
 
     }
 
@@ -193,17 +205,6 @@ class RNGFullfillerWorker extends BaseWorker {
 
     }
 
-    async _fulfillRandomnessRequests() {
-        try {
-            const eventsData = await this._searchRandomnessRequests();
-            await this._parseEvents(eventsData);
-            return setTimeout(this._fulfillRandomnessRequests, this._timeOutInterval);
-
-        } catch (error) {
-            console.error("Error fetching events:", error);
-            return setTimeout(this._fulfillRandomnessRequests, this._timeOutInterval);
-        }
-    }
 
     async _coldStartOperations() {
         // 1. start from the inception block. fetch all events so far
