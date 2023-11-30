@@ -4,7 +4,9 @@
   "description": "a fair rng generator for smart contracts",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "worker": "node bin/runWorkers.js workers",
+    "api": "node --trace-deprecation src/api/index.js api",
+    "format": "prettier 'src/**/*.js' 'config/**/*.js' 'bin/**/*.js' --write"
   },
   "author": "",
   "license": "ISC",

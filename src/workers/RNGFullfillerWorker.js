@@ -1,5 +1,5 @@
 const BaseWorker = require('./BaseWorker');
-const { Provider, Contract, constants, Account, num, RpcProvider } = require("starknet");
+const { hash, Contract, constants, Account, num, RpcProvider } = require("starknet");
 
 const { getHashAtIndexBinary, hashSeedNTimesBinary } = require("../lib/RNGGenerator");
 
@@ -8,25 +8,22 @@ class RNGFullfillerWorker extends BaseWorker {
         super(config, storage, logger);
         this.commonConfig = this.getConfig();
         this._timeOutId = null;
-        this._timeOutInterval = 5000 | parseInt(process.env.EVENT_POLLING_INTERVAL_MS);
+        this._timeOutInterval = 5000 || parseInt(process.env.EVENT_POLLING_INTERVAL_MS);
         this.searchAndfulfillRequests = this.searchAndfulfillRequests.bind(this); // bind to current context
-        this.rngs = hashSeedNTimesBinary(process.env.RANDOMNESS_SEED, parseInt(process.env.RANDOM_NUMBER_AMOUNT) | 1000000);
-        this.finalizationHistoryBuffer = [];
-        this.finalizationHistoryBufferLen = parseInt(process.env.FINALIZATION_HISTORY_BUFFER_LEN) | 20;
+        this.rngs = hashSeedNTimesBinary(process.env.RANDOMNESS_SEED, parseInt(process.env.RANDOM_NUMBER_AMOUNT) || 1000000);
         this.randomnessProviderPrivateKey = process.env.RANDOMNESS_PROVIDER_PRIVATE_KEY;
         this.randomnessProviderAccountAddress = process.env.RANDOMNESS_PROVIDER_ACCOUNT_ADDRESS;
         this.randomnessRequesterContractAddress = process.env.RAMDOMNESS_REQUESTER_CONTRACT_ADDRESS;
-        this.randomnessRequesterIndexingStartBlock = parseInt(process.env.RANDOMNESS_REQUESTER_INDEXING_START_BLOCK); // can be undefined
         this.randomnessRequesterContractABI; // set dynamically 
         this.rpcProvider = new RpcProvider({ nodeUrl: process.env.RPC_NODE_URL, retries: 3 });
         this.randomnessProvider = new Account(this.rpcProvider, this.randomnessProviderAccountAddress, this.randomnessProviderPrivateKey);
         this.keyFilter = [num.toHex(hash.starknetKeccak("RandomnessRequestIssued")), "0x8", num.toHex(hash.starknetKeccak("RandomnessRequestFulfilled")), "0x8"];
-        this.startBlock = process.env.RANDOMNESS_REQUESTER_INDEXING_START_BLOCK;
+        this.startBlock = parseInt(process.env.RANDOMNESS_REQUESTER_INDEXING_START_BLOCK);
         this.randomnessRequester;
         this.recentRequestsBuffer = []
-        this.recentRequestsBufferLength = 5;
+        this.recentRequestsBufferLength = parseInt(process.env.FINALIZATION_HISTORY_BUFFER_LEN) || 20;
         this.currentRandomNumberIndex = 0; // incremented after every finalization, starts from 0
-        this.blocksToWait = 2 | process.env.BLOCKS_TO_WAIT; // this is only relevant if there is an open request for some time. In an event of start just wait this amount of blocks to ensure that all unifinalized requests are actually missing and not due to the fulfilled event not being received yet.
+        this.blocksToWait = 2 || process.env.BLOCKS_TO_WAIT; // this is only relevant if there is an open request for some time. In an event of start just wait this amount of blocks to ensure that all unifinalized requests are actually missing and not due to the fulfilled event not being received yet.
         this.blockToWaitUntil;
 
     }
@@ -44,7 +41,7 @@ class RNGFullfillerWorker extends BaseWorker {
     }
 
     async _createAndConnectRandomnessRequesterContract() {
-        this.randomnessRequesterContractABI = await this._getRandomnessRequesterContractABI();
+        await this._getRandomnessRequesterContractABI(); // todo refactor with args maybe
         this.randomnessRequester = new Contract(this.randomnessRequesterContractABI, this.randomnessRequesterContractAddress, this.rpcProvider);
         this.randomnessRequester.connect(this.randomnessProvider);
     }
@@ -167,7 +164,7 @@ class RNGFullfillerWorker extends BaseWorker {
     handleFulfillOperations(request_id, eventData) {
         const entryToUpdate = this.recentRequestsBuffer.find(entry => entry.requestId === request_id);
         if (!entryToUpdate) {
-            console.log(¸`Ǹo such request id issued! ${parsedhFulfilledRequestData.request_id}`);
+            console.log(`Ǹo such request id issued!`);
             return;
         }
         entryToUpdate.status = "Fulfilled";

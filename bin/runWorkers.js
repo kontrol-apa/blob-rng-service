@@ -1,5 +1,4 @@
 const Logger = require('../src/lib/Logger');
-const {syncDb} = require('../src/lib/db-drivers/init-models');
 const loggerConfig = {
   console: {
     level: Logger.level.DEBUG,
@@ -22,7 +21,6 @@ if (argv.length === 4) {
   const w = new Worker(conf, storage, l);
   w.execute().then(() => { });
 } else {
-  syncDb()
   // Start worker manager (main process)
   const config = require(`../config/${argv[2]}.js`);
   const WorkerManager = require('../src/workers/WorkerManager');
