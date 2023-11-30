@@ -1,1 +1,0 @@
-{"version":1,"contracts":[{"id":"mkiem7lfhhp1m","package_name":"example_contract","contract_name":"ExampleRandomnessRequester","artifacts":{"sierra":"example_contract_ExampleRandomnessRequester.contract_class.json","casm":"example_contract_ExampleRandomnessRequester.compiled_contract_class.json"}}]}
